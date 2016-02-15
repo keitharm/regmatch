@@ -1,3 +1,4 @@
+[![Stories in Ready](https://badge.waffle.io/keitharm/regmatch.png?label=ready&title=Ready)](https://waffle.io/keitharm/regmatch)
 # regmatch
 No need for perl, gawk, awk, sed, grep, egrep, and their flags that you have forgotten. Easily perform regex operations with grouping on the CLI.
 
