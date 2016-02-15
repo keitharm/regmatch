@@ -1,6 +1,6 @@
 {
   "name": "regmatch",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Easily perform regex operations with grouping on the CLI.",
   "main": "regmatch",
   "author": "Keith Armstrong",

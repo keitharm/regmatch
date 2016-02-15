@@ -3,6 +3,7 @@
 var fs        = require('fs');
 var args      = process.argv.slice(2);
 var rawMode   = false;
+var json      = false;
 
 // Raw mode, default to off
 // on = return the exact regex.exec result
@@ -10,6 +11,12 @@ var rawMode   = false;
 if (args.indexOf("--raw") !== -1) {
   rawMode = true;
   args.splice(args.indexOf("--raw"), 1);
+}
+
+// JSON export
+if (args.indexOf("--json") !== -1) {
+  json = true;
+  args.splice(args.indexOf("--json"), 1);
 }
 
 var data, modifiers, regex;
@@ -32,7 +39,7 @@ if (process.stdin.isTTY) {
   if (data === undefined || args[1] === undefined || args[1] === '') process.exit(0);
 
   regMatch(function(results) {
-    console.log(results);
+    console.log(json !== true ? results : JSON.stringify(results));
   });
 } else {
   data = '';
@@ -63,7 +70,8 @@ if (process.stdin.isTTY) {
     if (data === undefined || args[0] === undefined || args[0] === '') process.exit(0);
 
     regMatch(function(results) {
-      console.log(results);
+
+      console.log(json !== true ? results : JSON.stringify(results));
     });
   });
 }
