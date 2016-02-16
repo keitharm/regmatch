@@ -1,6 +1,6 @@
 {
   "name": "regmatch",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Easily perform regex operations with grouping on the CLI.",
   "main": "regmatch",
   "author": "Keith Armstrong",
@@ -15,7 +15,9 @@
     "regmatch": "regmatch"
   },
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "minimist": "^1.2.0"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/keitharm/regmatch.git"
