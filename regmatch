@@ -1,48 +1,19 @@
 #!/usr/bin/env node
 
-var fs        = require('fs');
-var args      = process.argv.slice(2);
-var rawMode   = false;
-var json      = false;
+var fs         = require('fs');
+var argv       = require('minimist')(process.argv.slice(2));
+var args       = argv._; // Get the non flag arguments
+var vals       = {};
 
-// Raw mode, default to off
-// on = return the exact regex.exec result
-// off = return match only
-if (args.indexOf("--raw") !== -1) {
-  rawMode = true;
-  args.splice(args.indexOf("--raw"), 1);
-}
+// Extract named parameters
+Object.keys(argv).slice(1).forEach(function(value) {
+  vals[value] = true;
+});
 
-// JSON export
-if (args.indexOf("--json") !== -1) {
-  json = true;
-  args.splice(args.indexOf("--json"), 1);
-}
-
-var data, modifiers, regex;
-if (process.stdin.isTTY) {
-  // Even though executed by name, the first argument is still "node",
-  // the second the script name. The third is the string we want.
-  // Do my thing
-
-  data      = args[0];
-  modifiers = args[2] !== undefined ? args[2] : "";
-
-  try {
-  regex = new RegExp(args[1], modifiers);
-  } catch (e) {
-    console.error(e);
-    process.exit();
-  }
-
-  // If no data or match supplied, just quit
-  if (data === undefined || args[1] === undefined || args[1] === '') process.exit(0);
-
-  regMatch(function(results) {
-    console.log(json !== true ? results : JSON.stringify(results));
-  });
+if (process.stdin.constructor.name === "ReadStream") {
+  prep(0);
 } else {
-  data = '';
+  var data = '';
   process.stdin.setEncoding('utf-8');
   process.stdin.on('readable', function() {
     var chunk;
@@ -53,26 +24,61 @@ if (process.stdin.isTTY) {
 
   process.stdin.on('end', function () {
     // There will be a trailing \n from the user hitting enter. Get rid of it.
-    data = data.replace(/\n$/, '');
-    // do my thing
+    vals['data'] = data.replace(/\n$/, '');
+    prep(1);
+  });
+}
 
+function prep(type) {
+  // type = 0 means no stdin
+  var stdin = true;
+  if (type === 0) {
+    vals['data'] = args.splice(args.length-1, 1)[0]; // Data is the last argument.
+    stdin = false;
+  }
+  // Regex is 1st argument
+  vals['regexRaw'] = args[0] || '';
 
-    modifiers = args[1] !== undefined ? args[1] : "";
+  if (empty(vals['data']) || empty(vals['regexRaw'])) {
+    process.exit();
+  }
 
-    try {
-    regex = new RegExp(args[0], modifiers);
-    } catch (e) {
-      console.error(e);
-      process.exit();
+  vals['modifiers'] = args[1] || argv['modifiers'] || '';
+  vals['format']    = args[2] || argv['format'] || '';
+
+  // If format supplied, cancel out raw mode
+  if (!empty(vals['format'])) {
+    vals['raw'] = false;
+  }
+
+  try {
+    vals['regex'] = new RegExp(vals['regexRaw'], vals['modifiers']);
+  } catch (e) {
+    console.error(e);
+    process.exit();
+  }
+
+  regMatch(function(results) {
+    if (vals['prettyjson'] === true) {
+      console.log(JSON.stringify(results, null, '\t'));
+    } else if (vals['json'] === true) {
+      console.log(JSON.stringify(results));
+    } else if (vals['raw']) {
+      results.forEach(function(result) {
+        console.log(result[0])
+      });
+    } else if (vals['format'] !== "") {
+
+      results.forEach(function(result) {
+        var copy = vals['format'];
+        result.forEach(function(variable, index) {
+          copy = copy.replace("$" + index, variable);
+        });
+        console.log(copy);
+      });
+    } else {
+      console.log(results);
     }
-
-    // If no data or match supplied, just quit
-    if (data === undefined || args[0] === undefined || args[0] === '') process.exit(0);
-
-    regMatch(function(results) {
-
-      console.log(json !== true ? results : JSON.stringify(results));
-    });
   });
 }
 
@@ -80,36 +86,33 @@ function regMatch(cb) {
   var matches   = [];
 
   // Check if data is a file
-  if (exists(data)) {
-    data = fs.readFileSync(data, 'utf-8');
+  if (exists(vals['data'])) {
+    vals['data'] = fs.readFileSync(vals['data'], 'utf-8');
   }
-  var found = regex.exec(data, modifiers);
-  if (modifiers.indexOf('g') !== -1) {
+  var found = vals['regex'].exec(vals['data'], vals['modifiers']);
+  if (vals['modifiers'].indexOf('g') !== -1) {
+    var times = 0;
     while(found !== null) {
-      if (rawMode) {
+      // No matching groups
+      if (Object.keys(found).length === 3) {
         matches.push(found.slice(0));
       } else {
-        // No matching groups
-        if (Object.keys(found).length === 3) {
-          matches.push(found.slice(0));
-        } else {
-          matches.push(found.slice(1));
-        }
+        matches.push(found.slice(1));
       }
-      found = regex.exec(data, modifiers);
+      found = vals['regex'].exec(vals['data'], vals['modifiers']);
+      if (++times === 100) {
+        matches = [matches[0]];
+        break;
+      }
     }
     cb(matches);
   } else {
-    var result = regex.exec(data, modifiers) || [];
-    if (rawMode) {
-      cb(result.slice(0));
+    var result = vals['regex'].exec(vals['data'], vals['modifiers']) || [];
+    // No matching groups
+    if (Object.keys(result).length === 3) {
+      cb([result.slice(0)]);
     } else {
-      // No matching groups
-      if (Object.keys(result).length === 3) {
-        cb(result.slice(0));
-      } else {
-        cb(result.slice(1));
-      }
+      cb([result.slice(1)]);
     }
   }
 }
@@ -121,4 +124,8 @@ function exists(file) {
     return false;
   }
   return true;
+}
+
+function empty(val) {
+  return val === '' || val === undefined;
 }
