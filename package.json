@@ -10,6 +10,9 @@
     "grouping",
     "cli"
   ],
+  "scripts": {
+    "test": "mocha spec/test.js"
+  },
   "preferGlobal": "true",
   "bin": {
     "regmatch": "regmatch"
@@ -24,5 +27,10 @@
   },
   "bugs": {
     "url": "https://github.com/keitharm/regmatch/issues"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "mocha": "^2.4.5",
+    "supertest": "^1.2.0"
   }
 }
